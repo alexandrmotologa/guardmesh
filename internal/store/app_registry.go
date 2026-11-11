@@ -85,8 +85,25 @@ func (s *Store) ListApplications() ([]Application, error) {
 		if err := rows.Scan(&a.ID, &a.Name, &fsStr, &lsStr, &a.HighestRiskTier, &a.TotalRequests, &a.TotalPIIMasked, &a.ComplianceStatus); err != nil {
 			return nil, err
 		}
-		a.FirstSeen, _ = time.Parse(time.RFC3339, fsStr)
-		a.LastSeen, _ = time.Parse(time.RFC3339, lsStr)
+		if t, err := time.Parse(time.RFC3339Nano, fsStr); err == nil {
+			a.FirstSeen = t
+		} else if t, err := time.Parse(time.RFC3339, fsStr); err == nil {
+			a.FirstSeen = t
+		} else if t, err := time.Parse("2006-01-02T15:04:05.999999", fsStr); err == nil {
+			a.FirstSeen = t
+		} else if t, err := time.Parse("2006-01-02T15:04:05", fsStr); err == nil {
+			a.FirstSeen = t
+		}
+
+		if t, err := time.Parse(time.RFC3339Nano, lsStr); err == nil {
+			a.LastSeen = t
+		} else if t, err := time.Parse(time.RFC3339, lsStr); err == nil {
+			a.LastSeen = t
+		} else if t, err := time.Parse("2006-01-02T15:04:05.999999", lsStr); err == nil {
+			a.LastSeen = t
+		} else if t, err := time.Parse("2006-01-02T15:04:05", lsStr); err == nil {
+			a.LastSeen = t
+		}
 		apps = append(apps, a)
 	}
 	return apps, nil

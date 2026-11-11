@@ -1,6 +1,27 @@
-# guardmesh
+<p align="center">
+  <img src="docs/images/logo.png?raw=true" alt="guardmesh Logo" width="130" style="border-radius: 24px;" />
+</p>
 
-Enterprise AI governance gateway, bidirectional PII de-identification proxy, and automated EU AI Act compliance auditor.
+<h1 align="center">guardmesh</h1>
+
+<p align="center">
+  <strong>Enterprise AI Governance Gateway, Real-Time Bidirectional PII Anonymizer & Automated EU AI Act Compliance Auditor</strong>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Go-1.24-00ADD8?style=flat&logo=go" alt="Go" />
+  <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat&logo=react" alt="React 19" />
+  <img src="https://img.shields.io/badge/Regulation-EU%202024%2F1689-003399?style=flat" alt="EU AI Act" />
+  <img src="https://img.shields.io/badge/GDPR-Compliant-success?style=flat" alt="GDPR" />
+  <img src="https://img.shields.io/badge/Latency-<0.1ms-emerald?style=flat" alt="Latency" />
+  <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License" />
+</p>
+
+<p align="center">
+  <img src="docs/images/guardmesh_demo.gif?raw=true" alt="guardmesh Live Execution Demo" width="800" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.3);" />
+</p>
+
+---
 
 Deploying generative AI within corporate infrastructure introduces regulatory liabilities under **Regulation (EU) 2024/1689 (EU AI Act)** and **GDPR**. Violations of prohibited practices carry statutory fines up to €35,000,000 or 7% of global annual turnover. Internal microservices routinely transmit customer personal data, developer secrets, and internal documents to third-party model providers.
 
@@ -23,6 +44,44 @@ Deploying generative AI within corporate infrastructure introduces regulatory li
 - **Cloud & Kubernetes Observability**: Native `/healthz`, `/readyz`, and Prometheus `/metrics` endpoints.
 - **Embedded Compliance Cockpit**: Serves a real-time React 19 dashboard directly from the single Go binary at `http://localhost:8080/`.
 - **Sub-Millisecond Overhead**: Operates with an average proxy overhead of under 0.1 milliseconds per request.
+
+---
+
+## Visual Interface & Architecture
+
+### Desktop Executive Cockpit
+<p align="center">
+  <img src="docs/images/guardmesh_overview.png?raw=true" alt="guardmesh Executive Dashboard" width="800" style="border-radius: 10px;" />
+</p>
+
+### Live Audit Telemetry & Forensic Event Inspector
+<p align="center">
+  <img src="docs/images/guardmesh_events.png?raw=true" alt="guardmesh Live Audit Log" width="800" style="border-radius: 10px;" />
+</p>
+
+<p align="center">
+  <img src="docs/images/guardmesh_event_modal.png?raw=true" alt="guardmesh Audit Event Forensic Modal" width="800" style="border-radius: 10px;" />
+</p>
+
+### EU AI Act Pre-Deployment Auditor & 4-Stage PII Simulator
+<p align="center">
+  <img src="docs/images/guardmesh_auditor.png?raw=true" alt="guardmesh EU AI Act Auditor" width="800" style="border-radius: 10px;" />
+</p>
+
+<p align="center">
+  <img src="docs/images/guardmesh_simulator.png?raw=true" alt="guardmesh PII Simulator" width="800" style="border-radius: 10px;" />
+</p>
+
+### Discovered Applications & Shadow AI Registry (1-Click Annex IV PDF Export)
+<p align="center">
+  <img src="docs/images/guardmesh_apps.png?raw=true" alt="guardmesh Discovered Applications" width="800" style="border-radius: 10px;" />
+</p>
+
+### Adaptive Mobile Interface
+<p align="center">
+  <img src="docs/images/guardmesh_mobile.png?raw=true" alt="guardmesh Mobile View" width="370" style="border-radius: 16px; margin-right: 12px;" />
+  <img src="docs/images/guardmesh_mobile_menu.png?raw=true" alt="guardmesh Mobile Menu" width="370" style="border-radius: 16px;" />
+</p>
 
 ---
 

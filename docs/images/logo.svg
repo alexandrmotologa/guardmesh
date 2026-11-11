@@ -1,0 +1,252 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <clipPath id="squircle-clip">
+      <rect x="24" y="24" width="976" height="976" rx="220" />
+    </clipPath>
+
+    <linearGradient id="cyan-glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f5ff"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+
+    <linearGradient id="emerald-shield" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+
+    <linearGradient id="slate-plate-l" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </linearGradient>
+
+    <linearGradient id="slate-plate-r" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+
+    <filter id="subtle-shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#000000" flood-opacity="0.14" />
+    </filter>
+  </defs>
+
+  <!-- Luxury White Squircle Container -->
+  <rect x="24" y="24" width="976" height="976" rx="220" fill="#ffffff" stroke="#e2e8f0" stroke-width="6" />
+
+  <g clip-path="url(#squircle-clip)">
+    <g transform="translate(512, 512)" filter="url(#subtle-shadow)">
+
+      <!-- Hexagonal Architectural Gateway Frame -->
+      <polygon points="
+        0,-390
+        338,-195
+        338,195
+        0,390
+        -338,195
+        -338,-195
+      " fill="none" stroke="#0f172a" stroke-width="36" stroke-linejoin="round" />
+
+      <!-- Inner Dashed Cyan Precision Gateway Orbit -->
+      <polygon points="
+        0,-355
+        307,-177
+        307,177
+        0,355
+        -307,177
+        -307,-177
+      " fill="none" stroke="#00f5ff" stroke-width="4" opacity="0.45" stroke-dasharray="16, 12" />
+
+      <!-- ============================================================== -->
+      <!-- SENTINEL HOUND / AEGIS GUARDIAN SILHOUETTE (WATERTIGHT BASE)   -->
+      <!-- ============================================================== -->
+      <path d="
+        M 0 -220
+        L 55 -215
+        L 135 -335
+        L 165 -185
+        L 200 -50
+        L 155 90
+        L 185 200
+        L 260 325
+        L 0 280
+        L -260 325
+        L -185 200
+        L -155 90
+        L -200 -50
+        L -165 -185
+        L -135 -335
+        L -55 -215
+        Z
+      " fill="#0b0f19" />
+
+      <!-- ============================================================== -->
+      <!-- VOLUMETRIC LOW-POLY FACETS (SYMMETRICAL ARCHITECTURE)          -->
+      <!-- ============================================================== -->
+
+      <!-- EARS (LEFT & RIGHT) -->
+      <!-- Left Ear Outer Shadow -->
+      <polygon points="-135,-335 -165,-185 -105,-155" fill="#0f172a" />
+      <!-- Left Ear Inner Flap -->
+      <polygon points="-135,-335 -105,-155 -55,-215" fill="#1e293b" />
+      <!-- Left Ear Core Inset -->
+      <polygon points="-125,-300 -105,-165 -70,-205" fill="#334155" />
+      <!-- Left Ear Cyan Pulse Line -->
+      <polygon points="-120,-280 -108,-180 -95,-185" fill="#00f5ff" opacity="0.3" />
+
+      <!-- Right Ear Outer Highlight -->
+      <polygon points="135,-335 165,-185 105,-155" fill="#1e293b" />
+      <!-- Right Ear Inner Flap -->
+      <polygon points="135,-335 105,-155 55,-215" fill="#334155" />
+      <!-- Right Ear Core Inset -->
+      <polygon points="125,-300 105,-165 70,-205" fill="#475569" />
+      <!-- Right Ear Cyan Pulse Line -->
+      <polygon points="120,-280 108,-180 95,-185" fill="#00f5ff" opacity="0.3" />
+
+      <!-- FOREHEAD & CRANIAL CREST -->
+      <!-- Upper Crown Left -->
+      <polygon points="0,-220 -55,-215 -105,-155 0,-165" fill="#1e293b" />
+      <!-- Upper Crown Right -->
+      <polygon points="0,-220 55,-215 105,-155 0,-165" fill="#334155" />
+      <!-- Central Forehead Wedge Left -->
+      <polygon points="0,-165 -105,-155 -70,-80 0,-95" fill="#334155" />
+      <!-- Central Forehead Wedge Right -->
+      <polygon points="0,-165 105,-155 70,-80 0,-95" fill="#475569" />
+
+      <!-- TEMPLE & ZYGOMATIC CHEEKBONES (LATERAL ARCHITECTURE) -->
+      <!-- Left Temple -->
+      <polygon points="-105,-155 -165,-185 -200,-50 -130,-55" fill="#0f172a" />
+      <!-- Right Temple -->
+      <polygon points="105,-155 165,-185 200,-50 130,-55" fill="#1e293b" />
+      <!-- Left Upper Cheek -->
+      <polygon points="-105,-155 -130,-55 -70,-80" fill="#1e293b" />
+      <!-- Right Upper Cheek -->
+      <polygon points="105,-155 130,-55 70,-80" fill="#334155" />
+
+      <!-- BROW & EYE SOCKETS -->
+      <!-- Left Brow Ridge -->
+      <polygon points="0,-95 -70,-80 -130,-55 -60,-45 0,-50" fill="#0f172a" />
+      <!-- Right Brow Ridge -->
+      <polygon points="0,-95 70,-80 130,-55 60,-45 0,-50" fill="#1e293b" />
+
+      <!-- PREDATOR EYES (ALMOND GEOMETRIC OPTICS SLANTED AT 18 DEGREES) -->
+      <!-- Left Eye Socket Shadow -->
+      <polygon points="-125,-60 -65,-50 -75,-30 -130,-38" fill="#050811" />
+      <!-- Left Eye Iris (Electric Cyan) -->
+      <polygon points="-120,-56 -72,-48 -80,-35 -125,-42" fill="url(#cyan-glow)" />
+      <!-- Left Eye Slit Pupil -->
+      <polygon points="-98,-54 -92,-52 -95,-38 -101,-40" fill="#0b0f19" />
+
+      <!-- Right Eye Socket Shadow -->
+      <polygon points="125,-60 65,-50 75,-30 130,-38" fill="#050811" />
+      <!-- Right Eye Iris (Electric Cyan) -->
+      <polygon points="120,-56 72,-48 80,-35 125,-42" fill="url(#cyan-glow)" />
+      <!-- Right Eye Slit Pupil -->
+      <polygon points="98,-54 92,-52 95,-38 101,-40" fill="#0b0f19" />
+
+      <!-- NOSE BRIDGE & MUZZLE (COMPACT AERODYNAMIC CANINE SHAPE) -->
+      <!-- Central Bridge Left -->
+      <polygon points="0,-50 -60,-45 -40,30 0,40" fill="#1e293b" />
+      <!-- Central Bridge Right -->
+      <polygon points="0,-50 60,-45 40,30 0,40" fill="#334155" />
+
+      <!-- Mid Muzzle Lateral Left -->
+      <polygon points="-60,-45 -130,-38 -95,45 -40,30" fill="#334155" />
+      <!-- Mid Muzzle Lateral Right -->
+      <polygon points="60,-45 130,-38 95,45 40,30" fill="#475569" />
+
+      <!-- Titanium Cheek Highlights (Refined Slate #64748b & #94a3b8) -->
+      <polygon points="-130,-38 -200,-50 -155,90 -95,45" fill="#475569" />
+      <polygon points="130,-38 200,-50 155,90 95,45" fill="#64748b" />
+
+      <!-- NOSE & JAW APEX -->
+      <!-- Obsidian Nose Pad -->
+      <polygon points="0,40 -25,48 0,65 25,48" fill="#050811" />
+      <polygon points="0,40 -12,44 0,55 12,44" fill="#00f5ff" opacity="0.4" />
+
+      <!-- Whisker Pad Left -->
+      <polygon points="-25,48 0,65 -45,100 -95,45 -40,30" fill="#1e293b" />
+      <!-- Whisker Pad Right -->
+      <polygon points="25,48 0,65 45,100 95,45 40,30" fill="#334155" />
+
+      <!-- Chin & Lower Jaw Apex -->
+      <polygon points="0,65 -45,100 0,125 45,100" fill="#0f172a" />
+      <polygon points="0,125 -45,100 -25,145 0,155 25,145 45,100" fill="#1e293b" />
+
+      <!-- LOWER CHEEKS & JAW FLANKS -->
+      <polygon points="-95,45 -155,90 -115,160 -45,100" fill="#0f172a" />
+      <polygon points="95,45 155,90 115,160 45,100" fill="#1e293b" />
+
+      <!-- ============================================================== -->
+      <!-- AEGIS ARMOR BREASTPLATE & EU AI ACT GOVERNANCE CORE            -->
+      <!-- ============================================================== -->
+
+      <!-- Throat Flanks -->
+      <polygon points="0,155 -25,145 -115,160 -80,225 0,210" fill="#0f172a" />
+      <polygon points="0,155 25,145 115,160 80,225 0,210" fill="#1e293b" />
+
+      <!-- Outer Muscular Obsidian Shoulder Armor -->
+      <!-- Left Shoulder Upper -->
+      <polygon points="-155,90 -185,200 -135,245 -115,160" fill="#0b0f19" />
+      <!-- Left Shoulder Lower -->
+      <polygon points="-185,200 -260,325 -160,300 -135,245" fill="#0f172a" />
+
+      <!-- Right Shoulder Upper -->
+      <polygon points="155,90 185,200 135,245 115,160" fill="#1e293b" />
+      <!-- Right Shoulder Lower -->
+      <polygon points="185,200 260,325 160,300 135,245" fill="#1e293b" />
+
+      <!-- Pectoral Flanks -->
+      <polygon points="-115,160 -135,245 -65,275 -80,225" fill="#1e293b" />
+      <polygon points="115,160 135,245 65,275 80,225" fill="#334155" />
+
+      <polygon points="-135,245 -160,300 -60,285 -65,275" fill="#0f172a" />
+      <polygon points="135,245 160,300 60,285 65,275" fill="#1e293b" />
+
+      <!-- CENTRAL AEGIS GOVERNANCE HEXAGONAL CORE -->
+      <!-- Hexagonal Shield Outer -->
+      <polygon points="
+        0,185
+        55,215
+        55,270
+        0,300
+        -55,270
+        -55,215
+      " fill="#050811" stroke="#334155" stroke-width="4" stroke-linejoin="round" />
+
+      <!-- Inner Shield Inset (Emerald EU Compliance Core) -->
+      <polygon points="
+        0,195
+        42,220
+        42,263
+        0,288
+        -42,263
+        -42,220
+      " fill="url(#emerald-shield)" />
+
+      <!-- Central Zero-Trust Padlock Symbol in Shield -->
+      <path d="
+        M -12 242
+        L -12 234
+        C -12 227 -8 222 0 222
+        C 8 222 12 227 12 234
+        L 12 242
+        L 16 242
+        L 16 268
+        L -16 268
+        L -16 242
+        Z
+        M -6 242
+        L 6 242
+        L 6 234
+        C 6 230 4 227 0 227
+        C -4 227 -6 230 -6 234
+        Z
+      " fill="#ffffff" />
+      <circle cx="0" cy="252" r="3" fill="#047857" />
+
+      <!-- Base Armor Sweep -->
+      <polygon points="0,300 -55,270 -60,285 -160,300 0,280" fill="#0b0f19" />
+      <polygon points="0,300 55,270 60,285 160,300 0,280" fill="#0f172a" />
+
+    </g>
+  </g>
+</svg>

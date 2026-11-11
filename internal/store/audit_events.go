@@ -135,20 +135,29 @@ func (s *Store) QueryAuditEvents(filter AuditFilter) ([]AuditEvent, error) {
 		var e AuditEvent
 		var tsStr, reasonsStr, catsStr string
 		var isBlockedInt int
+		var blockedReason sql.NullString
 
 		err := rows.Scan(
 			&e.ID, &tsStr, &e.AppID, &e.ClientIP, &e.Provider, &e.Model,
 			&e.StatusCode, &e.LatencyMs, &e.PromptTokens, &e.CompletionTokens,
-			&e.RiskTier, &e.RiskScore, &reasonsStr, &isBlockedInt, &e.BlockedReason,
+			&e.RiskTier, &e.RiskScore, &reasonsStr, &isBlockedInt, &blockedReason,
 			&e.PIIDetectedCount, &catsStr, &e.PromptSHA256, &e.SampleSnippet,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan audit event: %w", err)
 		}
 
+		if blockedReason.Valid {
+			e.BlockedReason = blockedReason.String
+		}
+
 		if parsedTime, err := time.Parse(time.RFC3339Nano, tsStr); err == nil {
 			e.Timestamp = parsedTime
 		} else if parsedTime, err := time.Parse(time.RFC3339, tsStr); err == nil {
+			e.Timestamp = parsedTime
+		} else if parsedTime, err := time.Parse("2006-01-02T15:04:05.999999", tsStr); err == nil {
+			e.Timestamp = parsedTime
+		} else if parsedTime, err := time.Parse("2006-01-02T15:04:05", tsStr); err == nil {
 			e.Timestamp = parsedTime
 		}
 

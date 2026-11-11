@@ -13,6 +13,14 @@ export const LiveEvents: React.FC<Props> = ({ events, onRefresh }) => {
   const [search, setSearch] = useState('');
   const [selectedTier, setSelectedTier] = useState<string>('ALL');
 
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedEvent(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const filtered = events.filter((e) => {
     const matchesSearch =
       e.app_id.toLowerCase().includes(search.toLowerCase()) ||
