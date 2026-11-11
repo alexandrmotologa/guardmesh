@@ -4,18 +4,23 @@ Enterprise AI governance gateway, bidirectional PII de-identification proxy, and
 
 Deploying generative AI within corporate infrastructure introduces regulatory liabilities under **Regulation (EU) 2024/1689 (EU AI Act)** and **GDPR**. Violations of prohibited practices carry statutory fines up to €35,000,000 or 7% of global annual turnover. Internal microservices routinely transmit customer personal data, developer secrets, and internal documents to third-party model providers.
 
-`guardmesh` acts as an on-premises reverse proxy between internal applications and external model providers (OpenAI, Anthropic). It strips personal data and secrets before outbound transmission, reconstructs original values in streaming responses, classifies workloads into EU AI Act risk tiers, blocks prohibited practices, and generates regulator-ready technical documentation dossiers in PDF and Markdown.
+`guardmesh` acts as an on-premises reverse proxy between internal applications and external model providers (OpenAI, Anthropic). It strips personal data and secrets before outbound transmission, reconstructs original values in streaming responses, classifies workloads into EU AI Act risk tiers, blocks prohibited practices, enforces Article 50 transparency notices, and generates regulator-ready technical documentation dossiers in PDF and Markdown.
 
 ---
 
 ## Key Capabilities
 
 - **Zero-Code SDK Integration**: Compatible with OpenAI and Anthropic API endpoints. Redirect calls by updating the base URL (for example, `http://localhost:8080/v1`).
-- **Bidirectional PII De-Identification**: Scans for credit cards (Luhn verified), bank accounts (IBAN mod-97 verified), emails, phone numbers, SSNs, IP addresses, person names, and developer API keys. Replaces sensitive entities with deterministic tokens (`{{GUARDMESH_ENTITY_IBAN_1}}`).
+- **Bidirectional PII De-Identification**: Scans for credit cards (Luhn verified), bank accounts (IBAN mod-97 verified), Romanian CNP (key 279146358279 algorithm), Spanish NIF/NIE (modulo 23 check), emails, phone numbers, SSNs, IP addresses, person names, and developer API keys.
+- **Custom Enterprise DLP Rules**: Define custom regular expression patterns in configuration (for example, proprietary employee badges like `EMP-[0-9]{6}`).
 - **Streaming Token Boundary Buffer**: Resolves tokens split across Server-Sent Events (SSE) packet boundaries without increasing stream latency.
 - **Article 5 Hard-Kill Enforcer**: Rejects prohibited AI practices (such as workplace emotion recognition, social scoring, or biometric categorization) with an HTTP 403 Forbidden status code.
+- **Article 50 Transparency Enforcer**: Automatically injects mandatory transparency notices and `X-AI-Generated: true` headers for customer-facing conversational assistants.
+- **Real-Time Webhook Alerting**: Dispatches structured alert notifications to Slack, Microsoft Teams, or SIEM endpoints when prohibited practices or prompt injections occur.
 - **Annex III High-Risk Classification**: Evaluates system instructions and tool definitions against Annex III domains (recruitment, credit assessment, essential public services, education).
 - **1-Click Audit Dossier Generation**: Exports complete Annex IV technical documentation and NIST AI RMF cross-walks in PDF and Markdown format.
+- **Audit Log Exporter**: Exports historical audit telemetry in CSV and JSONL formats for external regulatory reviews.
+- **Cloud & Kubernetes Observability**: Native `/healthz`, `/readyz`, and Prometheus `/metrics` endpoints.
 - **Embedded Compliance Cockpit**: Serves a real-time React 19 dashboard directly from the single Go binary at `http://localhost:8080/`.
 - **Sub-Millisecond Overhead**: Operates with an average proxy overhead of under 0.1 milliseconds per request.
 
@@ -65,7 +70,7 @@ client = OpenAI(
 response = client.chat.completions.create(
     model="gpt-4o",
     messages=[
-        {"role": "user", "content": "Process payment for John Doe at DE89370400440532013000, SSN 123-45-6789."}
+        {"role": "user", "content": "Process payment for Alice Walker, Romanian CNP 1800514123459, IBAN DE89370400440532013000."}
     ],
     stream=True
 )
@@ -78,7 +83,7 @@ for chunk in response:
 
 External OpenAI endpoints receive only:
 ```
-"Process payment for {{GUARDMESH_ENTITY_PERSON_NAME_1}} at {{GUARDMESH_ENTITY_IBAN_1}}, SSN {{GUARDMESH_ENTITY_SSN_1}}."
+"Process payment for {{GUARDMESH_ENTITY_PERSON_NAME_1}}, Romanian CNP {{GUARDMESH_ENTITY_ROMANIAN_CNP_1}}, IBAN {{GUARDMESH_ENTITY_IBAN_1}}."
 ```
 
 The client receives the response with original values restored.
@@ -97,7 +102,7 @@ const anthropic = new Anthropic({
 const message = await anthropic.messages.create({
   model: 'claude-3-5-sonnet-20241022',
   max_tokens: 1024,
-  messages: [{ role: 'user', content: 'Customer email is alice@company.org.' }],
+  messages: [{ role: 'user', content: 'Customer contact is alice@company.org, NIF 12345678Z.' }],
 });
 ```
 
@@ -109,9 +114,9 @@ const message = await anthropic.messages.create({
 
 | Tier | Regulation Article | Scope & Triggers | Gateway Action |
 |---|---|---|---|
-| **Prohibited** | Article 5 | Workplace emotion recognition, social scoring, biometric categorization of protected traits, subliminal manipulation. | Terminated before egress (HTTP 403 Forbidden). Audit record logged. |
+| **Prohibited** | Article 5 | Workplace emotion recognition, social scoring, biometric categorization of protected traits, subliminal manipulation. | Terminated before egress (HTTP 403 Forbidden). Webhook alert sent. |
 | **High-Risk** | Annex III | CV screening, recruitment filtering, credit scoring, health insurance risk evaluation, emergency service triage. | Telemetry logged. Article 14 human oversight flags set. Technical dossier enabled. |
-| **Limited Risk** | Article 50 | Customer-facing conversational agents, synthetic media generation. | Transparency verification. PII masking active. |
+| **Limited Risk** | Article 50 | Customer-facing conversational agents, synthetic media generation. | Injects transparency header and disclaimer notice. PII masking active. |
 | **Minimal Risk** | Article 4 | Routine text summarization, coding assistance, translation. | Standard telemetry logging. |
 
 ---
@@ -126,32 +131,10 @@ Evaluate system instructions or tool definitions against EU AI Act criteria:
 guardmesh classify --prompt "You are an HR agent. Screen incoming resumes and score job applicants."
 ```
 
-Output:
-```
-------------------------------------------------------------------
- EU AI Act Compliance Evaluation (Regulation EU 2024/1689)
-------------------------------------------------------------------
- Risk Classification Tier: HIGH_RISK
- Risk Severity Score:     0.85 / 1.00
- Automated Hard Block:    false
-
- Applicable Legal Articles:
-  • Annex III(4)(a)
-
- Classification Reasons & Findings:
-  • Recruitment, CV screening, job application filtering or candidate evaluation
-
- Required Compliance Controls:
-  [X] Article 14 Human Oversight, Article 11 Technical Documentation
-
- ✓ Security Check: No adversarial prompt injection detected
-------------------------------------------------------------------
-```
-
 ### Scan Files or Text for Sensitive Entities
 
 ```bash
-guardmesh scan --text "Customer Alice Walker at DE89370400440532013000, SSN 123-45-6789, email alice@domain.com."
+guardmesh scan --text "Verify employee EMP-982314 with Romanian CNP 1800514123459, Spanish NIF 12345678Z, email alice@domain.com."
 ```
 
 ### Generate Annex IV Technical Dossier
@@ -195,9 +178,10 @@ guardmesh benchmark --requests 1000
                          v                         v
          +-------------------------------+ +-------------------------------+
          |    Security & Policy Guard    | |    Bidirectional PII Engine   |
-         |  - Article 5 Hard Kill        | |  - Luhn & Mod-97 Checksums    |
-         |  - Annex III Classifier       | |  - Ephemeral AES-256 Vault    |
-         |  - Injection Scanner          | |  - Chunk Window Rehydrator    |
+         |  - Article 5 Hard Kill        | |  - Luhn, Mod-97, CNP & NIF    |
+         |  - Article 50 Transparency    | |  - Custom Enterprise Regex    |
+         |  - Webhook Alert Dispatcher   | |  - Ephemeral AES-256 Vault    |
+         |  - Annex III Classifier       | |  - Chunk Window Rehydrator    |
          +-------------------------------+ +-------------------------------+
                          |                         |
                          +------------+------------+
@@ -213,6 +197,7 @@ guardmesh benchmark --requests 1000
                        +-----------------------------+
                        |    Stream Window Buffer     |
                        |  - Resolves split tokens    |
+                       |  - Injects Art. 50 notices  |
                        |  - Restores original PII    |
                        |  - Writes SQLite audit WAL  |
                        +-----------------------------+
@@ -224,29 +209,15 @@ guardmesh benchmark --requests 1000
                        +-----------------------------+
 ```
 
-### Zero-Allocation Entity Detection
-- **Payment Cards**: Visa, MasterCard, Amex, and Discover patterns validated against the Luhn algorithm to prevent false positives on numerical sequences.
-- **Bank Accounts**: IBAN detection with country-specific length checks and ISO 7064 Mod-97-10 verification.
-- **Developer Secrets**: Scans for OpenAI API keys (`sk-...`), GitHub personal access tokens (`ghp_...`), AWS credentials (`AKIA...`), JWT tokens, and private RSA/EC keys.
-- **Identifiers**: US Social Security Numbers, international phone numbers (E.164), non-loopback IP addresses, and person names.
-
-### Cryptographic Token Vault
-Mapped values reside in volatile RAM under an AES-256 GCM cipher. The key is generated at startup and held only in memory. Mappings automatically purge based on a configurable time-to-live setting (default 300 seconds).
-
 ---
 
-## Performance
+## Observability & Endpoints
 
-Tested on a standard 4-core x86_64 system processing realistic conversational payloads containing multiple entity types (names, emails, IBANs, SSNs, secrets):
-
-| Operation | Metric |
-|---|---|
-| PII Detection + Tokenization | 38.4 µs |
-| In-Memory AES-GCM Decryption | 12.1 µs |
-| Stream Chunk Window Lookahead | 8.2 µs |
-| Total Gateway Overhead | **0.068 ms** |
-| Throughput | **14,700+ ops/sec** |
-| Idle Binary Memory | **18 MB** |
+- `GET /healthz` - Kubernetes liveness check
+- `GET /readyz` - Readiness probe asserting database and vault health
+- `GET /metrics` - Prometheus metrics format
+- `GET /api/events/export?format=csv` - Raw audit logs in CSV format
+- `GET /api/events/export?format=jsonl` - Raw audit logs in JSON Lines format
 
 ---
 
@@ -273,6 +244,12 @@ pii:
     ip_address: true
     person_name: true
     api_secrets: true
+    romanian_cnp: true
+    spanish_nif: true
+    custom_rules:
+      - name: "EmployeeBadge"
+        pattern: "\\bEMP-[0-9]{6}\\b"
+        category: "EMPLOYEE_ID"
 
 governance:
   enabled: true
@@ -280,10 +257,21 @@ governance:
   log_annex_iii_high_risk: true
   require_human_oversight_flag: true
   default_application_id: "crm-agent"
+  article50_transparency: true
+  article50_header: true
+  article50_disclaimer_text: "\n\n*(Notice: Response generated by an artificial intelligence system in accordance with Article 50 of Regulation (EU) 2024/1689)*"
 
 security:
   scan_prompt_injection: true
   block_prompt_injection: false
+
+alerts:
+  enabled: false
+  webhooks:
+    - name: "SlackAlerts"
+      url: "https://hooks.slack.com/services/T00/B00/XXXX"
+      secret: "whsec_optional_hmac_secret"
+      events: ["blocked", "prohibited", "high_risk"]
 ```
 
 ---

@@ -14,14 +14,16 @@ import (
 type EntityCategory string
 
 const (
-	CategoryCreditCard EntityCategory = "CREDIT_CARD"
-	CategoryIBAN       EntityCategory = "IBAN"
-	CategoryEmail      EntityCategory = "EMAIL"
-	CategoryPhone      EntityCategory = "PHONE"
-	CategorySSN        EntityCategory = "SSN"
-	CategoryIPAddress  EntityCategory = "IP_ADDRESS"
-	CategoryAPISecret  EntityCategory = "API_SECRET"
-	CategoryPersonName EntityCategory = "PERSON_NAME"
+	CategoryCreditCard  EntityCategory = "CREDIT_CARD"
+	CategoryIBAN        EntityCategory = "IBAN"
+	CategoryEmail       EntityCategory = "EMAIL"
+	CategoryPhone       EntityCategory = "PHONE"
+	CategorySSN         EntityCategory = "SSN"
+	CategoryIPAddress   EntityCategory = "IP_ADDRESS"
+	CategoryAPISecret   EntityCategory = "API_SECRET"
+	CategoryPersonName  EntityCategory = "PERSON_NAME"
+	CategoryRomanianCNP EntityCategory = "ROMANIAN_CNP"
+	CategorySpanishNIF  EntityCategory = "SPANISH_NIF"
 )
 
 type DetectedEntity struct {
@@ -32,6 +34,12 @@ type DetectedEntity struct {
 	Confidence float64
 }
 
+type CompiledCustomRule struct {
+	Name     string
+	Category EntityCategory
+	Regex    *regexp.Regexp
+}
+
 type Detector struct {
 	cfg config.DetectorsConfig
 
@@ -40,19 +48,24 @@ type Detector struct {
 	phoneRegex     *regexp.Regexp
 	ibanRegex      *regexp.Regexp
 	ccRegex        *regexp.Regexp
+	cnpRegex       *regexp.Regexp
+	nifRegex       *regexp.Regexp
 	apiKeyRegexes  []*regexp.Regexp
 	titleNameRegex *regexp.Regexp
 	introNameRegex *regexp.Regexp
+	customRules    []CompiledCustomRule
 }
 
 func NewDetector(cfg config.DetectorsConfig) *Detector {
-	return &Detector{
-		cfg: cfg,
+	d := &Detector{
+		cfg:        cfg,
 		emailRegex: regexp.MustCompile(`(?i)\b[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}\b`),
 		ssnRegex:   regexp.MustCompile(`\b\d{3}-\d{2}-\d{4}\b`),
 		phoneRegex: regexp.MustCompile(`(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b`),
 		ibanRegex:  regexp.MustCompile(`\b[A-Z]{2}\d{2}[A-Z0-9]{11,30}\b`),
 		ccRegex:    regexp.MustCompile(`\b(?:\d{4}[-\s]?){3}\d{4}\b|\b\d{13,19}\b`),
+		cnpRegex:   regexp.MustCompile(`\b[1-9]\d{12}\b`),
+		nifRegex:   regexp.MustCompile(`(?i)\b(?:[0-9]{8}[TRWAGMYFPDXBNJZSQVHLCKE]|[XYZ][0-9]{7}[TRWAGMYFPDXBNJZSQVHLCKE])\b`),
 		apiKeyRegexes: []*regexp.Regexp{
 			regexp.MustCompile(`\bsk-[a-zA-Z0-9]{20,}\b`),                                          // OpenAI API keys
 			regexp.MustCompile(`\bghp_[a-zA-Z0-9]{36}\b`),                                          // GitHub Personal Access Token
@@ -63,26 +76,24 @@ func NewDetector(cfg config.DetectorsConfig) *Detector {
 		titleNameRegex: regexp.MustCompile(`\b(?:Mr\.|Mrs\.|Ms\.|Dr\.|Prof\.|Herr|Frau|Monsieur)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b`),
 		introNameRegex: regexp.MustCompile(`(?i)\b(?:name is|patient|customer|client|contact|user)\s+([A-Z][a-z]+\s+[A-Z][a-z]+)\b`),
 	}
-}
 
-func isValidSSN(ssn string) bool {
-	parts := strings.Split(ssn, "-")
-	if len(parts) != 3 {
-		return false
+	for _, cr := range cfg.CustomRules {
+		if cr.Pattern != "" {
+			if rx, err := regexp.Compile(cr.Pattern); err == nil {
+				cat := EntityCategory(cr.Category)
+				if cat == "" {
+					cat = EntityCategory("CUSTOM_" + strings.ToUpper(cr.Name))
+				}
+				d.customRules = append(d.customRules, CompiledCustomRule{
+					Name:     cr.Name,
+					Category: cat,
+					Regex:    rx,
+				})
+			}
+		}
 	}
-	area, err1 := strconv.Atoi(parts[0])
-	group, err2 := strconv.Atoi(parts[1])
-	serial, err3 := strconv.Atoi(parts[2])
-	if err1 != nil || err2 != nil || err3 != nil {
-		return false
-	}
-	if area == 0 || area == 666 || area >= 900 {
-		return false
-	}
-	if group == 0 || serial == 0 {
-		return false
-	}
-	return true
+
+	return d
 }
 
 func (d *Detector) Detect(text string) []DetectedEntity {
@@ -110,6 +121,36 @@ func (d *Detector) Detect(text string) []DetectedEntity {
 					Start:      match[0],
 					End:        match[1],
 					Confidence: 0.95,
+				})
+			}
+		}
+	}
+
+	if d.cfg.RomanianCNP {
+		for _, match := range d.cnpRegex.FindAllStringIndex(text, -1) {
+			val := text[match[0]:match[1]]
+			if isValidCNP(val) {
+				results = append(results, DetectedEntity{
+					Category:   CategoryRomanianCNP,
+					Value:      val,
+					Start:      match[0],
+					End:        match[1],
+					Confidence: 0.99,
+				})
+			}
+		}
+	}
+
+	if d.cfg.SpanishNIF {
+		for _, match := range d.nifRegex.FindAllStringIndex(text, -1) {
+			val := text[match[0]:match[1]]
+			if isValidSpanishNIF(val) {
+				results = append(results, DetectedEntity{
+					Category:   CategorySpanishNIF,
+					Value:      val,
+					Start:      match[0],
+					End:        match[1],
+					Confidence: 0.99,
 				})
 			}
 		}
@@ -198,7 +239,6 @@ func (d *Detector) Detect(text string) []DetectedEntity {
 	}
 
 	if d.cfg.PersonName {
-		// Title-based names: "Dr. Alice Smith"
 		for _, match := range d.titleNameRegex.FindAllStringSubmatchIndex(text, -1) {
 			if len(match) >= 4 && match[2] >= 0 && match[3] >= 0 {
 				results = append(results, DetectedEntity{
@@ -210,7 +250,6 @@ func (d *Detector) Detect(text string) []DetectedEntity {
 				})
 			}
 		}
-		// Contextual intro names: "name is Alice Smith"
 		for _, match := range d.introNameRegex.FindAllStringSubmatchIndex(text, -1) {
 			if len(match) >= 4 && match[2] >= 0 && match[3] >= 0 {
 				results = append(results, DetectedEntity{
@@ -224,7 +263,116 @@ func (d *Detector) Detect(text string) []DetectedEntity {
 		}
 	}
 
+	// Custom regex rules defined by the enterprise
+	for _, rule := range d.customRules {
+		for _, match := range rule.Regex.FindAllStringIndex(text, -1) {
+			results = append(results, DetectedEntity{
+				Category:   rule.Category,
+				Value:      text[match[0]:match[1]],
+				Start:      match[0],
+				End:        match[1],
+				Confidence: 0.95,
+			})
+		}
+	}
+
 	return filterOverlaps(results)
+}
+
+func isValidSSN(ssn string) bool {
+	parts := strings.Split(ssn, "-")
+	if len(parts) != 3 {
+		return false
+	}
+	area, err1 := strconv.Atoi(parts[0])
+	group, err2 := strconv.Atoi(parts[1])
+	serial, err3 := strconv.Atoi(parts[2])
+	if err1 != nil || err2 != nil || err3 != nil {
+		return false
+	}
+	if area == 0 || area == 666 || area >= 900 {
+		return false
+	}
+	if group == 0 || serial == 0 {
+		return false
+	}
+	return true
+}
+
+// isValidCNP validates Romanian Personal Numeric Code (Cod Numeric Personal)
+func isValidCNP(cnp string) bool {
+	if len(cnp) != 13 {
+		return false
+	}
+	for _, r := range cnp {
+		if !unicode.IsDigit(r) {
+			return false
+		}
+	}
+
+	// Check S (sex and century): 1-9
+	s := cnp[0] - '0'
+	if s == 0 {
+		return false
+	}
+
+	// Month: digits 3 and 4 (01-12)
+	month, _ := strconv.Atoi(cnp[3:5])
+	if month < 1 || month > 12 {
+		return false
+	}
+
+	// Day: digits 5 and 6 (01-31)
+	day, _ := strconv.Atoi(cnp[5:7])
+	if day < 1 || day > 31 {
+		return false
+	}
+
+	// Control key constant algorithm: 279146358279
+	key := []int{2, 7, 9, 1, 4, 6, 3, 5, 8, 2, 7, 9}
+	sum := 0
+	for i := 0; i < 12; i++ {
+		sum += int(cnp[i]-'0') * key[i]
+	}
+
+	remainder := sum % 11
+	controlDigit := remainder
+	if remainder == 10 {
+		controlDigit = 1
+	}
+
+	expectedControl := int(cnp[12] - '0')
+	return controlDigit == expectedControl
+}
+
+// isValidSpanishNIF validates Spanish DNI/NIF/NIE
+func isValidSpanishNIF(nif string) bool {
+	nif = strings.ToUpper(strings.TrimSpace(nif))
+	if len(nif) != 9 {
+		return false
+	}
+
+	letters := "TRWAGMYFPDXBNJZSQVHLCKE"
+
+	// Support NIE format (starts with X, Y, Z)
+	firstChar := nif[0]
+	numStr := nif[:8]
+
+	if firstChar == 'X' {
+		numStr = "0" + nif[1:8]
+	} else if firstChar == 'Y' {
+		numStr = "1" + nif[1:8]
+	} else if firstChar == 'Z' {
+		numStr = "2" + nif[1:8]
+	}
+
+	num, err := strconv.Atoi(numStr)
+	if err != nil {
+		return false
+	}
+
+	expectedLetter := letters[num%23]
+	return nif[8] == expectedLetter
 }
 
 func isValidLuhn(number string) bool {
@@ -253,10 +401,8 @@ func isValidIBAN(iban string) bool {
 		return false
 	}
 
-	// Move first 4 characters to the end
 	rearranged := cleaned[4:] + cleaned[:4]
 
-	// Convert letters to numbers (A=10, B=11, ... Z=35)
 	var sb strings.Builder
 	for _, char := range rearranged {
 		if char >= 'A' && char <= 'Z' {
@@ -268,7 +414,6 @@ func isValidIBAN(iban string) bool {
 		}
 	}
 
-	// Calculate mod 97 using math/big
 	n := new(big.Int)
 	n, ok := n.SetString(sb.String(), 10)
 	if !ok {
@@ -288,28 +433,46 @@ func keepDigits(s string) string {
 	return sb.String()
 }
 
-// filterOverlaps sorts and removes entities that collide with higher-confidence matches
 func filterOverlaps(entities []DetectedEntity) []DetectedEntity {
 	if len(entities) <= 1 {
 		return entities
 	}
 
-	// Sort by start index ascending, then by length descending
 	for i := 0; i < len(entities)-1; i++ {
 		for j := i + 1; j < len(entities); j++ {
-			if entities[i].Start > entities[j].Start ||
-				(entities[i].Start == entities[j].Start && (entities[i].End-entities[i].Start) < (entities[j].End-entities[j].Start)) {
+			lenI := entities[i].End - entities[i].Start
+			lenJ := entities[j].End - entities[j].Start
+
+			shouldSwap := false
+			if entities[i].Start > entities[j].Start {
+				shouldSwap = true
+			} else if entities[i].Start == entities[j].Start {
+				if entities[i].Confidence < entities[j].Confidence {
+					shouldSwap = true
+				} else if entities[i].Confidence == entities[j].Confidence && lenI < lenJ {
+					shouldSwap = true
+				}
+			}
+			if shouldSwap {
 				entities[i], entities[j] = entities[j], entities[i]
 			}
 		}
 	}
 
 	var filtered []DetectedEntity
-	lastEnd := -1
 	for _, e := range entities {
-		if e.Start >= lastEnd {
+		if len(filtered) == 0 {
 			filtered = append(filtered, e)
-			lastEnd = e.End
+			continue
+		}
+		last := &filtered[len(filtered)-1]
+		if e.Start < last.End {
+			// Overlap: keep the one with strictly higher confidence
+			if e.Confidence > last.Confidence {
+				*last = e
+			}
+		} else {
+			filtered = append(filtered, e)
 		}
 	}
 

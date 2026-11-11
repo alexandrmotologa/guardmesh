@@ -3,6 +3,7 @@ package store
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -81,5 +82,25 @@ func TestStore_AuditAndApps(t *testing.T) {
 	}
 	if stats.TotalRequests != 1 || stats.TotalPIIMasked != 3 {
 		t.Errorf("unexpected stats: %+v", stats)
+	}
+
+	// Test CSV Export
+	var csvBuf strings.Builder
+	if err := s.ExportAuditEventsCSV(AuditFilter{AppID: "crm-portal"}, &csvBuf); err != nil {
+		t.Fatalf("export csv failed: %v", err)
+	}
+	csvStr := csvBuf.String()
+	if !strings.Contains(csvStr, "id,timestamp,app_id") || !strings.Contains(csvStr, "crm-portal") {
+		t.Errorf("unexpected csv output: %s", csvStr)
+	}
+
+	// Test JSONL Export
+	var jsonlBuf strings.Builder
+	if err := s.ExportAuditEventsJSONL(AuditFilter{AppID: "crm-portal"}, &jsonlBuf); err != nil {
+		t.Fatalf("export jsonl failed: %v", err)
+	}
+	jsonlStr := jsonlBuf.String()
+	if !strings.Contains(jsonlStr, `"app_id":"crm-portal"`) {
+		t.Errorf("unexpected jsonl output: %s", jsonlStr)
 	}
 }

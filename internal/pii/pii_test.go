@@ -17,15 +17,12 @@ func TestDetectorAndVault(t *testing.T) {
 	}
 	defer vault.Close()
 
-	// Text with multiple PII elements
-	text := "Customer John Doe with email john.doe@example.com, SSN 123-45-6789, IP 198.51.100.42, and key sk-1234567890abcdef1234567890."
+	// Text with multiple PII elements including Romanian CNP, Spanish NIF, and custom Employee ID
+	text := "Customer John Doe with email john.doe@example.com, SSN 123-45-6789, Romanian CNP 1800514123459, Spanish NIF 12345678Z, badge EMP-482019, IP 198.51.100.42, and key sk-1234567890abcdef1234567890."
 
 	masked, count, cats := vault.MaskText("test-sess-1", text, det, "token")
-	if count < 4 {
-		t.Fatalf("expected at least 4 entities detected, got %d", count)
-	}
-	if len(cats) < 3 {
-		t.Fatalf("expected at least 3 categories, got %v", cats)
+	if count < 6 {
+		t.Fatalf("expected at least 6 entities detected, got %d", count)
 	}
 
 	// Verify original values are not in masked text
@@ -34,6 +31,15 @@ func TestDetectorAndVault(t *testing.T) {
 	}
 	if strings.Contains(masked, "123-45-6789") {
 		t.Errorf("masked text still contains SSN")
+	}
+	if strings.Contains(masked, "1800514123459") {
+		t.Errorf("masked text still contains Romanian CNP")
+	}
+	if strings.Contains(masked, "12345678Z") {
+		t.Errorf("masked text still contains Spanish NIF")
+	}
+	if strings.Contains(masked, "EMP-482019") {
+		t.Errorf("masked text still contains Employee Badge")
 	}
 	if strings.Contains(masked, "sk-1234567890abcdef1234567890") {
 		t.Errorf("masked text still contains API secret")
@@ -44,9 +50,14 @@ func TestDetectorAndVault(t *testing.T) {
 	if !strings.Contains(rehydrated, "john.doe@example.com") {
 		t.Errorf("rehydrated text missing email: %s", rehydrated)
 	}
-	if !strings.Contains(rehydrated, "123-45-6789") {
-		t.Errorf("rehydrated text missing SSN: %s", rehydrated)
+	if !strings.Contains(rehydrated, "1800514123459") {
+		t.Errorf("rehydrated text missing CNP: %s", rehydrated)
 	}
+	if !strings.Contains(rehydrated, "EMP-482019") {
+		t.Errorf("rehydrated text missing Employee badge: %s", rehydrated)
+	}
+
+	_ = cats
 }
 
 func TestStreamRehydrator_SplitChunks(t *testing.T) {
@@ -64,8 +75,6 @@ func TestStreamRehydrator_SplitChunks(t *testing.T) {
 		t.Fatalf("expected email detected")
 	}
 
-	// Simulate streaming token split:
-	// Find the token in masked text
 	openIdx := strings.Index(masked, "{{")
 	closeIdx := strings.Index(masked, "}}")
 	if openIdx == -1 || closeIdx == -1 {

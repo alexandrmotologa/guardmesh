@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alexandrmotologa/guardmesh/internal/alerts"
 	"github.com/alexandrmotologa/guardmesh/internal/classifier"
 	"github.com/alexandrmotologa/guardmesh/internal/config"
 	"github.com/alexandrmotologa/guardmesh/internal/pii"
@@ -24,16 +25,18 @@ type OpenAIAdapter struct {
 	detector *pii.Detector
 	policy   *classifier.PolicyEngine
 	store    *store.Store
+	alerts   *alerts.Dispatcher
 	client   *http.Client
 }
 
-func NewOpenAIAdapter(cfg *config.Config, v *pii.Vault, d *pii.Detector, p *classifier.PolicyEngine, s *store.Store) *OpenAIAdapter {
+func NewOpenAIAdapter(cfg *config.Config, v *pii.Vault, d *pii.Detector, p *classifier.PolicyEngine, s *store.Store, al *alerts.Dispatcher) *OpenAIAdapter {
 	return &OpenAIAdapter{
 		cfg:      cfg,
 		vault:    v,
 		detector: d,
 		policy:   p,
 		store:    s,
+		alerts:   al,
 		client: &http.Client{
 			Timeout: 120 * time.Second,
 		},
@@ -102,7 +105,7 @@ func (oa *OpenAIAdapter) HandleChatCompletions(w http.ResponseWriter, r *http.Re
 	// 3. Check if request must be blocked (Article 5 Prohibited or Prompt Injection Block)
 	if riskEval.IsBlocked {
 		duration := time.Since(start).Seconds() * 1000
-		_ = oa.store.RecordAuditEvent(&store.AuditEvent{
+		evt := &store.AuditEvent{
 			ID:               requestID,
 			Timestamp:        start,
 			AppID:            appID,
@@ -119,7 +122,11 @@ func (oa *OpenAIAdapter) HandleChatCompletions(w http.ResponseWriter, r *http.Re
 			PIIDetectedCount: 0,
 			PromptSHA256:     promptSHA,
 			SampleSnippet:    truncateSnippet(contextText, 120),
-		})
+		}
+		_ = oa.store.RecordAuditEvent(evt)
+		if oa.alerts != nil {
+			oa.alerts.Dispatch(evt)
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("X-Guardmesh-Risk-Tier", string(riskEval.Tier))
@@ -190,6 +197,13 @@ func (oa *OpenAIAdapter) HandleChatCompletions(w http.ResponseWriter, r *http.Re
 	defer resp.Body.Close()
 
 	// 7. Handle Streaming vs Non-Streaming Response
+	isLimitedRisk := riskEval.Tier == classifier.TierLimitedRisk
+	article50Active := isLimitedRisk && oa.cfg.Governance.Article50Transparency
+	if article50Active && oa.cfg.Governance.Article50Header {
+		w.Header().Set("X-AI-Generated", "true")
+		w.Header().Set("X-EU-AI-Act-Article", "Article 50(1)")
+	}
+
 	if chatReq.Stream {
 		flusher, ok := w.(http.Flusher)
 		if !ok {
@@ -206,11 +220,16 @@ func (oa *OpenAIAdapter) HandleChatCompletions(w http.ResponseWriter, r *http.Re
 		w.Header().Set("X-Guardmesh-PII-Masked", fmt.Sprintf("%d", totalPIICount))
 		w.WriteHeader(resp.StatusCode)
 
+		suffix := ""
+		if article50Active && oa.cfg.Governance.Article50DisclaimerText != "" {
+			suffix = oa.cfg.Governance.Article50DisclaimerText
+		}
+
 		rehydrator := pii.NewStreamRehydrator(requestID, oa.vault)
-		tokensCount, _ := InterceptOpenAISSEStream(resp.Body, w, flusher, rehydrator)
+		tokensCount, _ := InterceptOpenAISSEStream(resp.Body, w, flusher, rehydrator, suffix)
 
 		duration := time.Since(start).Seconds() * 1000
-		_ = oa.store.RecordAuditEvent(&store.AuditEvent{
+		evt := &store.AuditEvent{
 			ID:               requestID,
 			Timestamp:        start,
 			AppID:            appID,
@@ -229,7 +248,11 @@ func (oa *OpenAIAdapter) HandleChatCompletions(w http.ResponseWriter, r *http.Re
 			PIICategories:    allCategories,
 			PromptSHA256:     promptSHA,
 			SampleSnippet:    truncateSnippet(contextText, 120),
-		})
+		}
+		_ = oa.store.RecordAuditEvent(evt)
+		if oa.alerts != nil {
+			oa.alerts.Dispatch(evt)
+		}
 		return
 	}
 
@@ -253,6 +276,9 @@ func (oa *OpenAIAdapter) HandleChatCompletions(w http.ResponseWriter, r *http.Re
 					content, ok := message["content"].(string)
 					if ok && content != "" {
 						rehydrated := oa.vault.RehydrateText(requestID, content)
+						if article50Active && oa.cfg.Governance.Article50DisclaimerText != "" {
+							rehydrated += oa.cfg.Governance.Article50DisclaimerText
+						}
 						message["content"] = rehydrated
 						choice["message"] = message
 						choices[0] = choice
@@ -270,7 +296,7 @@ func (oa *OpenAIAdapter) HandleChatCompletions(w http.ResponseWriter, r *http.Re
 	}
 
 	duration := time.Since(start).Seconds() * 1000
-	_ = oa.store.RecordAuditEvent(&store.AuditEvent{
+	evt := &store.AuditEvent{
 		ID:               requestID,
 		Timestamp:        start,
 		AppID:            appID,
@@ -289,7 +315,11 @@ func (oa *OpenAIAdapter) HandleChatCompletions(w http.ResponseWriter, r *http.Re
 		PIICategories:    allCategories,
 		PromptSHA256:     promptSHA,
 		SampleSnippet:    truncateSnippet(contextText, 120),
-	})
+	}
+	_ = oa.store.RecordAuditEvent(evt)
+	if oa.alerts != nil {
+		oa.alerts.Dispatch(evt)
+	}
 
 	for k, v := range resp.Header {
 		if strings.EqualFold(k, "Content-Length") {

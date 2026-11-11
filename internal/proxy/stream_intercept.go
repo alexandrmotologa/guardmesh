@@ -12,7 +12,7 @@ import (
 )
 
 // InterceptOpenAISSEStream reads SSE chunks from upstream, rehydrates PII across packet boundaries, and writes to client
-func InterceptOpenAISSEStream(upstream io.Reader, w http.ResponseWriter, flusher http.Flusher, rehydrator *pii.StreamRehydrator) (int, error) {
+func InterceptOpenAISSEStream(upstream io.Reader, w http.ResponseWriter, flusher http.Flusher, rehydrator *pii.StreamRehydrator, streamSuffix string) (int, error) {
 	scanner := bufio.NewScanner(upstream)
 	totalTokens := 0
 
@@ -24,7 +24,11 @@ func InterceptOpenAISSEStream(upstream io.Reader, w http.ResponseWriter, flusher
 
 			if strings.TrimSpace(dataPayload) == "[DONE]" {
 				// Flush any remaining buffered token fragments before sending [DONE]
-				if remaining := rehydrator.FlushRemainder(); remaining != "" {
+				remaining := rehydrator.FlushRemainder()
+				if streamSuffix != "" {
+					remaining += streamSuffix
+				}
+				if remaining != "" {
 					syntheticDoneChunk := fmt.Sprintf(`{"choices":[{"index":0,"delta":{"content":%s}}]}`, jsonString(remaining))
 					fmt.Fprintf(w, "data: %s\n\n", syntheticDoneChunk)
 				}
@@ -70,7 +74,7 @@ func InterceptOpenAISSEStream(upstream io.Reader, w http.ResponseWriter, flusher
 }
 
 // InterceptAnthropicSSEStream reads Anthropic SSE chunks, rehydrates PII, and streams to client
-func InterceptAnthropicSSEStream(upstream io.Reader, w http.ResponseWriter, flusher http.Flusher, rehydrator *pii.StreamRehydrator) (int, error) {
+func InterceptAnthropicSSEStream(upstream io.Reader, w http.ResponseWriter, flusher http.Flusher, rehydrator *pii.StreamRehydrator, streamSuffix string) (int, error) {
 	scanner := bufio.NewScanner(upstream)
 	totalTokens := 0
 
@@ -101,7 +105,11 @@ func InterceptAnthropicSSEStream(upstream io.Reader, w http.ResponseWriter, flus
 						}
 					}
 				} else if eventType == "message_stop" {
-					if remaining := rehydrator.FlushRemainder(); remaining != "" {
+					remaining := rehydrator.FlushRemainder()
+					if streamSuffix != "" {
+						remaining += streamSuffix
+					}
+					if remaining != "" {
 						syntheticDelta := fmt.Sprintf(`{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":%s}}`, jsonString(remaining))
 						fmt.Fprintf(w, "event: content_block_delta\ndata: %s\n\n", syntheticDelta)
 					}

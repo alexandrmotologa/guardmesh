@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, Activity, Radio, FileText, Layers, Search, Cpu } from 'lucide-react';
+import { Shield, Activity, Radio, FileText, Layers, Search, Cpu, SlidersHorizontal } from 'lucide-react';
 
 interface Props {
   activeTab: string;
@@ -13,7 +13,8 @@ export const Header: React.FC<Props> = ({ activeTab, setActiveTab, avgLatency })
     { id: 'events', label: 'Live Audit Log', icon: Radio },
     { id: 'apps', label: 'Applications & Dossiers', icon: Layers },
     { id: 'auditor', label: 'EU AI Act Auditor', icon: FileText },
-    { id: 'scanner', label: 'PII De-Identifier', icon: Search },
+    { id: 'scanner', label: 'PII Simulator', icon: Search },
+    { id: 'policies', label: 'Policies & DLP', icon: SlidersHorizontal },
   ];
 
   return (

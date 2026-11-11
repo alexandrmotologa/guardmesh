@@ -5,6 +5,7 @@ import { LiveEvents } from './pages/LiveEvents';
 import { Applications } from './pages/Applications';
 import { Auditor } from './pages/Auditor';
 import { PIIScanner } from './pages/PIIScanner';
+import { Policies } from './pages/Policies';
 import { GlobalStats, AuditEvent, Application } from './types';
 
 export const App: React.FC = () => {
@@ -54,6 +55,7 @@ export const App: React.FC = () => {
         )}
         {activeTab === 'auditor' && <Auditor />}
         {activeTab === 'scanner' && <PIIScanner />}
+        {activeTab === 'policies' && <Policies />}
       </main>
 
       <footer className="border-t border-slate-900 bg-slate-950/80 py-4 text-center text-xs text-slate-500 font-mono">

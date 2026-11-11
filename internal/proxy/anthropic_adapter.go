@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alexandrmotologa/guardmesh/internal/alerts"
 	"github.com/alexandrmotologa/guardmesh/internal/classifier"
 	"github.com/alexandrmotologa/guardmesh/internal/config"
 	"github.com/alexandrmotologa/guardmesh/internal/pii"
@@ -24,16 +25,18 @@ type AnthropicAdapter struct {
 	detector *pii.Detector
 	policy   *classifier.PolicyEngine
 	store    *store.Store
+	alerts   *alerts.Dispatcher
 	client   *http.Client
 }
 
-func NewAnthropicAdapter(cfg *config.Config, v *pii.Vault, d *pii.Detector, p *classifier.PolicyEngine, s *store.Store) *AnthropicAdapter {
+func NewAnthropicAdapter(cfg *config.Config, v *pii.Vault, d *pii.Detector, p *classifier.PolicyEngine, s *store.Store, al *alerts.Dispatcher) *AnthropicAdapter {
 	return &AnthropicAdapter{
 		cfg:      cfg,
 		vault:    v,
 		detector: d,
 		policy:   p,
 		store:    s,
+		alerts:   al,
 		client: &http.Client{
 			Timeout: 120 * time.Second,
 		},
@@ -106,7 +109,7 @@ func (aa *AnthropicAdapter) HandleMessages(w http.ResponseWriter, r *http.Reques
 	// 3. Block if Article 5 Prohibited
 	if riskEval.IsBlocked {
 		duration := time.Since(start).Seconds() * 1000
-		_ = aa.store.RecordAuditEvent(&store.AuditEvent{
+		evt := &store.AuditEvent{
 			ID:               requestID,
 			Timestamp:        start,
 			AppID:            appID,
@@ -123,7 +126,11 @@ func (aa *AnthropicAdapter) HandleMessages(w http.ResponseWriter, r *http.Reques
 			PIIDetectedCount: 0,
 			PromptSHA256:     promptSHA,
 			SampleSnippet:    truncateSnippet(contextText, 120),
-		})
+		}
+		_ = aa.store.RecordAuditEvent(evt)
+		if aa.alerts != nil {
+			aa.alerts.Dispatch(evt)
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("X-Guardmesh-Risk-Tier", string(riskEval.Tier))
@@ -200,6 +207,13 @@ func (aa *AnthropicAdapter) HandleMessages(w http.ResponseWriter, r *http.Reques
 	defer resp.Body.Close()
 
 	// 6. Handle Stream vs Non-Stream
+	isLimitedRisk := riskEval.Tier == classifier.TierLimitedRisk
+	article50Active := isLimitedRisk && aa.cfg.Governance.Article50Transparency
+	if article50Active && aa.cfg.Governance.Article50Header {
+		w.Header().Set("X-AI-Generated", "true")
+		w.Header().Set("X-EU-AI-Act-Article", "Article 50(1)")
+	}
+
 	if req.Stream {
 		flusher, ok := w.(http.Flusher)
 		if !ok {
@@ -216,11 +230,16 @@ func (aa *AnthropicAdapter) HandleMessages(w http.ResponseWriter, r *http.Reques
 		w.Header().Set("X-Guardmesh-PII-Masked", fmt.Sprintf("%d", totalPIICount))
 		w.WriteHeader(resp.StatusCode)
 
+		suffix := ""
+		if article50Active && aa.cfg.Governance.Article50DisclaimerText != "" {
+			suffix = aa.cfg.Governance.Article50DisclaimerText
+		}
+
 		rehydrator := pii.NewStreamRehydrator(requestID, aa.vault)
-		tokensCount, _ := InterceptAnthropicSSEStream(resp.Body, w, flusher, rehydrator)
+		tokensCount, _ := InterceptAnthropicSSEStream(resp.Body, w, flusher, rehydrator, suffix)
 
 		duration := time.Since(start).Seconds() * 1000
-		_ = aa.store.RecordAuditEvent(&store.AuditEvent{
+		evt := &store.AuditEvent{
 			ID:               requestID,
 			Timestamp:        start,
 			AppID:            appID,
@@ -239,7 +258,11 @@ func (aa *AnthropicAdapter) HandleMessages(w http.ResponseWriter, r *http.Reques
 			PIICategories:    allCategories,
 			PromptSHA256:     promptSHA,
 			SampleSnippet:    truncateSnippet(contextText, 120),
-		})
+		}
+		_ = aa.store.RecordAuditEvent(evt)
+		if aa.alerts != nil {
+			aa.alerts.Dispatch(evt)
+		}
 		return
 	}
 
@@ -259,7 +282,11 @@ func (aa *AnthropicAdapter) HandleMessages(w http.ResponseWriter, r *http.Reques
 				if blockMap, ok := block.(map[string]interface{}); ok {
 					if blockMap["type"] == "text" {
 						if textVal, ok := blockMap["text"].(string); ok {
-							blockMap["text"] = aa.vault.RehydrateText(requestID, textVal)
+							rehydrated := aa.vault.RehydrateText(requestID, textVal)
+							if article50Active && aa.cfg.Governance.Article50DisclaimerText != "" {
+								rehydrated += aa.cfg.Governance.Article50DisclaimerText
+							}
+							blockMap["text"] = rehydrated
 						}
 					}
 				}
@@ -274,7 +301,7 @@ func (aa *AnthropicAdapter) HandleMessages(w http.ResponseWriter, r *http.Reques
 	}
 
 	duration := time.Since(start).Seconds() * 1000
-	_ = aa.store.RecordAuditEvent(&store.AuditEvent{
+	evt := &store.AuditEvent{
 		ID:               requestID,
 		Timestamp:        start,
 		AppID:            appID,
@@ -293,7 +320,11 @@ func (aa *AnthropicAdapter) HandleMessages(w http.ResponseWriter, r *http.Reques
 		PIICategories:    allCategories,
 		PromptSHA256:     promptSHA,
 		SampleSnippet:    truncateSnippet(contextText, 120),
-	})
+	}
+	_ = aa.store.RecordAuditEvent(evt)
+	if aa.alerts != nil {
+		aa.alerts.Dispatch(evt)
+	}
 
 	for k, v := range resp.Header {
 		if strings.EqualFold(k, "Content-Length") {

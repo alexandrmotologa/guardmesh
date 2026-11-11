@@ -2,8 +2,12 @@ package store
 
 import (
 	"database/sql"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"io"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -194,4 +198,69 @@ func (s *Store) GetGlobalStats() (*GlobalStats, error) {
 	}
 
 	return stats, nil
+}
+
+func (s *Store) ExportAuditEventsCSV(filter AuditFilter, w io.Writer) error {
+	filter.Limit = 100000 // allow exporting all matching records
+	events, err := s.QueryAuditEvents(filter)
+	if err != nil {
+		return err
+	}
+
+	csvWriter := csv.NewWriter(w)
+	defer csvWriter.Flush()
+
+	header := []string{
+		"id", "timestamp", "app_id", "client_ip", "provider", "model",
+		"status_code", "latency_ms", "prompt_tokens", "completion_tokens",
+		"risk_tier", "risk_score", "is_blocked", "blocked_reason",
+		"pii_detected_count", "pii_categories", "prompt_sha256", "sample_snippet",
+	}
+	if err := csvWriter.Write(header); err != nil {
+		return err
+	}
+
+	for _, e := range events {
+		record := []string{
+			e.ID,
+			e.Timestamp.Format(time.RFC3339),
+			e.AppID,
+			e.ClientIP,
+			e.Provider,
+			e.Model,
+			strconv.Itoa(e.StatusCode),
+			fmt.Sprintf("%.2f", e.LatencyMs),
+			strconv.Itoa(e.PromptTokens),
+			strconv.Itoa(e.CompletionTokens),
+			e.RiskTier,
+			fmt.Sprintf("%.2f", e.RiskScore),
+			strconv.FormatBool(e.IsBlocked),
+			e.BlockedReason,
+			strconv.Itoa(e.PIIDetectedCount),
+			strings.Join(e.PIICategories, ";"),
+			e.PromptSHA256,
+			e.SampleSnippet,
+		}
+		if err := csvWriter.Write(record); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Store) ExportAuditEventsJSONL(filter AuditFilter, w io.Writer) error {
+	filter.Limit = 100000
+	events, err := s.QueryAuditEvents(filter)
+	if err != nil {
+		return err
+	}
+
+	encoder := json.NewEncoder(w)
+	for _, e := range events {
+		if err := encoder.Encode(e); err != nil {
+			return err
+		}
+	}
+	return nil
 }

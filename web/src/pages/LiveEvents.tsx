@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AuditEvent, RiskTier } from '../types';
 import { RiskBadge } from '../components/RiskBadge';
-import { Search, Filter, Ban, CheckCircle, ExternalLink, X, RefreshCw } from 'lucide-react';
+import { Search, Filter, Ban, CheckCircle, ExternalLink, X, RefreshCw, Download, FileSpreadsheet } from 'lucide-react';
 
 interface Props {
   events: AuditEvent[];
@@ -21,6 +21,14 @@ export const LiveEvents: React.FC<Props> = ({ events, onRefresh }) => {
     const matchesTier = selectedTier === 'ALL' || e.risk_tier === selectedTier;
     return matchesSearch && matchesTier;
   });
+
+  const getExportUrl = (format: 'csv' | 'jsonl') => {
+    let url = `/api/events/export?format=${format}`;
+    if (selectedTier !== 'ALL') {
+      url += `&risk_tier=${selectedTier}`;
+    }
+    return url;
+  };
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -53,13 +61,33 @@ export const LiveEvents: React.FC<Props> = ({ events, onRefresh }) => {
             </select>
           </div>
 
-          <button
-            onClick={onRefresh}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium transition"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            <a
+              href={getExportUrl('csv')}
+              download="guardmesh_audit.csv"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition"
+              title="Export filtered events as CSV"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+              <span>CSV</span>
+            </a>
+            <a
+              href={getExportUrl('jsonl')}
+              download="guardmesh_audit.jsonl"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition"
+              title="Export filtered events as JSONL"
+            >
+              <Download className="w-3.5 h-3.5 text-blue-400" />
+              <span>JSONL</span>
+            </a>
+            <button
+              onClick={onRefresh}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Refresh</span>
+            </button>
+          </div>
         </div>
       </div>
 
