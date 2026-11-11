@@ -1,0 +1,31 @@
+server:
+  host: "0.0.0.0"
+  port: 8080
+  upstream_openai: "https://api.openai.com"
+  upstream_anthropic: "https://api.anthropic.com"
+  db_path: "./guardmesh.db"
+
+pii:
+  enabled: true
+  mask_mode: "token" # "token" replaces with {{GUARDMESH_ENTITY_...}}, "redact" uses [REDACTED], "hash" uses SHA-256
+  token_ttl_seconds: 300
+  detectors:
+    credit_card: true
+    iban: true
+    email: true
+    phone: true
+    ssn: true
+    ip_address: true
+    person_name: true
+    api_secrets: true
+
+governance:
+  enabled: true
+  enforce_article5_block: true
+  log_annex_iii_high_risk: true
+  require_human_oversight_flag: true
+  default_application_id: "enterprise-crm"
+
+security:
+  scan_prompt_injection: true
+  block_prompt_injection: false

@@ -1,0 +1,33 @@
+# guardmesh Production Configuration Example
+
+server:
+  host: "0.0.0.0"
+  port: 8080
+  upstream_openai: "https://api.openai.com"
+  upstream_anthropic: "https://api.anthropic.com"
+  db_path: "./guardmesh.db"
+
+pii:
+  enabled: true
+  mask_mode: "token" # "token" replaces with {{GUARDMESH_ENTITY_...}}, "redact" uses [REDACTED], "hash" uses SHA-256
+  token_ttl_seconds: 300 # In-memory key-value mappings purge after 5 minutes
+  detectors:
+    credit_card: true  # Visa, MasterCard, Amex with Luhn checksum validation
+    iban: true         # International Bank Account Numbers with Mod-97 validation
+    email: true        # RFC 5322 compliant email addresses
+    phone: true        # International E.164 and localized telephone numbers
+    ssn: true          # US Social Security Numbers
+    ip_address: true   # Non-loopback IPv4 and IPv6 addresses
+    person_name: true  # Contextual and honorific name recognition
+    api_secrets: true  # OpenAI keys, GitHub PATs, AWS keys, JWTs, Private Keys
+
+governance:
+  enabled: true
+  enforce_article5_block: true      # Hard-block (HTTP 403) prohibited practices (Article 5)
+  log_annex_iii_high_risk: true     # Tag high-risk AI workloads (Annex III)
+  require_human_oversight_flag: true # Enforce human-in-the-loop requirements
+  default_application_id: "crm-agent"
+
+security:
+  scan_prompt_injection: true  # Scan incoming context for jailbreak attempts
+  block_prompt_injection: false # When true, terminates prompt injection requests
