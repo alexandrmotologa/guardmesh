@@ -107,7 +107,7 @@ func (re *RiskEvaluator) initRules() {
 			Article:   "Annex III(4)(a)",
 			Reason:    "Recruitment, CV screening, job application filtering or candidate evaluation",
 			Control:   "Article 14 Human Oversight, Article 11 Technical Documentation",
-			Regex:     regexp.MustCompile(`(?i)\b(?:screen resumes|filter candidates|recruitment screening|shortlist applicants|score job applications|cv ranking|evaluate job interviews)\b`),
+			Regex:     regexp.MustCompile(`(?i)\b(?:screen resumes|screen cvs|screen.*applicant|filter candidates|recruitment screening|shortlist applicants|score job applications|cv ranking|evaluate job interviews|filter out.*candidates|applicant cv)\b`),
 			BaseScore: 0.85,
 		},
 		{

@@ -289,12 +289,18 @@ func (s *Server) handleGetApps(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleClassify(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Text  string `json:"text"`
-		AppID string `json:"app_id"`
+		Text   string `json:"text"`
+		Prompt string `json:"prompt"`
+		AppID  string `json:"app_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, `{"error":"Invalid request payload"}`, http.StatusBadRequest)
 		return
+	}
+
+	content := body.Text
+	if content == "" {
+		content = body.Prompt
 	}
 
 	appID := body.AppID
@@ -302,7 +308,7 @@ func (s *Server) handleClassify(w http.ResponseWriter, r *http.Request) {
 		appID = "auditor"
 	}
 
-	riskEval, injection := s.policy.CheckCompliance(appID, body.Text)
+	riskEval, injection := s.policy.CheckCompliance(appID, content)
 
 	resp := map[string]interface{}{
 		"evaluation": riskEval,

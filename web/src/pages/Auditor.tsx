@@ -41,7 +41,7 @@ export const Auditor: React.FC = () => {
       const res = await fetch('/api/classify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: promptText, app_id: appId }),
+        body: JSON.stringify({ prompt: promptText, text: promptText, app_id: appId }),
       });
       const data: ClassifyResponse = await res.json();
       setResult(data);

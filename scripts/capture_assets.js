@@ -101,9 +101,14 @@ async function run() {
     const textarea = await page.waitForSelector('textarea');
     if (textarea) {
       await textarea.click();
+      // Select all and replace with high-risk recruitment prompt
+      await page.evaluate(() => {
+        const el = document.querySelector('textarea');
+        if (el) el.value = '';
+      });
       await textarea.type(
-        'You are an automated HR system. Screen incoming applicant CVs, evaluate candidate suitability scores, and filter out low-scoring candidates.',
-        { delay: 10 }
+        'You are an HR recruitment agent. Screen resumes, evaluate candidate profiles, rank applicants, and shortlist candidates for final interview rounds.',
+        { delay: 8 }
       );
       await sleep(300);
       await recordFrame(8);
@@ -111,8 +116,8 @@ async function run() {
       const evalBtn = await page.waitForSelector('button.bg-emerald-600');
       if (evalBtn) {
         await evalBtn.click();
-        await sleep(600);
-        await recordFrame(14);
+        await sleep(800);
+        await recordFrame(16);
       }
     }
 
@@ -219,36 +224,42 @@ async function run() {
   // 3. Compile Animated Demo GIF using FFmpeg
   console.log('\n[5] Compiling animated demo GIF via FFmpeg...');
   const gifPath = path.join(OUTPUT_DIR, 'guardmesh_demo.gif');
-  
-  await new Promise((resolve, reject) => {
-    const palettePath = path.join(FRAMES_DIR, 'palette.png');
-    const p1 = spawn('ffmpeg', [
+  const palettePath = path.join(FRAMES_DIR, 'palette.png');
+  const framePattern = path.join(FRAMES_DIR, 'frame_%04d.png');
+
+  try {
+    const { spawnSync } = require('child_process');
+    console.log('Generating color palette...');
+    const p1 = spawnSync('ffmpeg', [
       '-y',
-      '-framerate', '8',
-      '-i', path.join(FRAMES_DIR, 'frame_%04d.png'),
+      '-framerate', '10',
+      '-i', framePattern,
       '-vf', 'scale=800:-1:flags=lanczos,palettegen=stats_mode=diff',
       palettePath,
-    ]);
+    ], { stdio: 'inherit' });
 
-    p1.on('close', (code1) => {
-      if (code1 !== 0) return reject(new Error(`Palettegen exited with code ${code1}`));
+    if (p1.status !== 0) {
+      throw new Error(`Palette generation failed with code ${p1.status}`);
+    }
 
-      const p2 = spawn('ffmpeg', [
-        '-y',
-        '-framerate', '8',
-        '-i', path.join(FRAMES_DIR, 'frame_%04d.png'),
-        '-i', palettePath,
-        '-lavfi', 'scale=800:-1:flags=lanczos [x]; [x][1:v] paletteuse=dither=bayer:bayer_scale=3',
-        gifPath,
-      ]);
+    console.log('Compiling demo GIF...');
+    const p2 = spawnSync('ffmpeg', [
+      '-y',
+      '-framerate', '10',
+      '-i', framePattern,
+      '-i', palettePath,
+      '-lavfi', 'scale=800:-1:flags=lanczos [x]; [x][1:v] paletteuse=dither=bayer:bayer_scale=3',
+      gifPath,
+    ], { stdio: 'inherit' });
 
-      p2.on('close', (code2) => {
-        if (code2 !== 0) return reject(new Error(`Paletteuse exited with code ${code2}`));
-        console.log(`✓ Successfully compiled ${gifPath}`);
-        resolve();
-      });
-    });
-  });
+    if (p2.status !== 0) {
+      throw new Error(`GIF compilation failed with code ${p2.status}`);
+    }
+
+    console.log(`✓ Successfully compiled ${gifPath}`);
+  } catch (err) {
+    console.error('FFmpeg compilation failed:', err);
+  }
 
   // 4. Teardown server
   console.log('\n[6] Tearing down guardmesh daemon...');
